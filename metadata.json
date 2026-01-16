@@ -1,0 +1,7 @@
+{
+  "name": "LogiSmart Enterprise",
+  "description": "Smart Dynamic Logistics Platform with AI-driven risk analysis, climate monitoring, and real-time route optimization for the industrial sector.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
