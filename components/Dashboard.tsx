@@ -1,15 +1,47 @@
 
-import React from 'react';
-import { TrendingUp, Truck, AlertCircle, ShieldCheck, ChevronRight, Activity, Map as MapIcon } from 'lucide-react';
-import { MOCK_TRIPS, MOCK_INCIDENTS } from '../constants';
+import React, { useEffect, useState } from 'react';
+import { TrendingUp, Truck, AlertCircle, ShieldCheck, ChevronRight, Activity, Map as MapIcon, Loader2 } from 'lucide-react';
+import { dataService } from '../dataService';
+import { Trip, Incident, ViewType } from '../types';
 import LogisticsMap from './LogisticsMap';
-import { ViewType } from '../types';
 
 interface DashboardProps {
   onNavigate?: (view: ViewType) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [tripsData, incidentsData] = await Promise.all([
+          dataService.getTrips(),
+          dataService.getIncidents()
+        ]);
+        setTrips(tripsData);
+        setIncidents(incidentsData);
+      } catch (error) {
+        console.error("Erro ao carregar dashboard", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sincronizando com LogiSmart Cloud...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
@@ -36,9 +68,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Viagens em Curso', value: '124', change: '+12%', icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50', view: ViewType.FLEET },
+          { label: 'Viagens em Curso', value: trips.filter(t => t.status === 'in-transit').length.toString(), change: '+12%', icon: Truck, color: 'text-blue-600', bg: 'bg-blue-50', view: ViewType.FLEET },
           { label: 'Índice de Segurança', value: '98.4%', change: '+1.5%', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', view: ViewType.RISKS },
-          { label: 'Eventos Críticos', value: '02', change: '-4', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', view: ViewType.RISKS },
+          { label: 'Eventos Críticos', value: incidents.length.toString().padStart(2, '0'), change: '-4', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', view: ViewType.RISKS },
           { label: 'Economia de Escala', value: '14%', change: '+2.1%', icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50', view: ViewType.REPORTS },
         ].map((stat, i) => (
           <button 
@@ -88,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             Incidentes Recentes
           </h3>
           <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-            {MOCK_INCIDENTS.map(inc => (
+            {incidents.length > 0 ? incidents.map(inc => (
               <div key={inc.id} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500">
                 <div className="flex justify-between items-start mb-2">
                   <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg ${
@@ -109,7 +141,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   </button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-slate-400 text-xs text-center py-10 font-bold uppercase tracking-widest">Nenhuma ocorrência registrada</p>
+            )}
           </div>
           <div className="mt-6 pt-4 border-t border-slate-100">
             <button 
